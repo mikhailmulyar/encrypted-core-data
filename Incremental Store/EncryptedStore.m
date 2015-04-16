@@ -2325,23 +2325,24 @@ static void dbsqliteRegExp(sqlite3_context *context, int argc, const char **argv
     }
     
     NSString *entityWhere = nil;
-    if (request.entity.superentity != nil) {
-        if (request.entity.subentities.count > 0 && request.includesSubentities) {
-            entityWhere = [NSString stringWithFormat:@"%@.__entityType IN (%@)",
-                           [self tableNameForEntity:request.entity],
-                           [[self entityIdsForEntity:request.entity] componentsJoinedByString:@", "]];
-        } else {
-            entityWhere = [NSString stringWithFormat:@"%@.__entityType = %lu",
-                           [self tableNameForEntity:request.entity],
-                           request.entity.typeHash];
-        }
-        
-        if (query.length > 0) {
+    
+    if (request.entity.superentity)
+        if (request.entity.subentities.count > 0 && request.includesSubentities)
+            entityWhere = [NSString stringWithFormat:@"%@.__entityType IN (%@)", [self tableNameForEntity:request.entity], [[self entityIdsForEntity:request.entity] componentsJoinedByString:@", "]];
+        else
+            entityWhere = [NSString stringWithFormat:@"%@.__entityType = %lu", [self tableNameForEntity:request.entity], request.entity.typeHash];
+        else if(request.entity.subentities.count > 0)
+            if (request.includesSubentities)
+                entityWhere = [NSString stringWithFormat:@"%@.__entityType IN (%@) OR %@.__entityType IS NULL", [self tableNameForEntity:request.entity], [[self entityIdsForEntity:request.entity] componentsJoinedByString:@", "], [self tableNameForEntity:request.entity]];
+            else
+                entityWhere = [NSString stringWithFormat:@"%@.__entityType IS NULL", [self tableNameForEntity:request.entity]];
+    
+    if(entityWhere)
+        if (query.length > 0)
             query = [@[ entityWhere, query ] componentsJoinedByString:@" AND "];
-        } else {
+        else
             query = entityWhere;
-        }
-    }
+    
     return @{ @"query": query,
               @"bindings": bindings };
 }
